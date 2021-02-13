@@ -42,7 +42,10 @@ class Menu;
 class Shell;
 class Point;
 class SetPoints;
+bool comp(Point a, Point b);
+int dist(Point a, Point b);
 int vect_comp(Point a, Point b, Point p);
+
 
 mt19937 _g(time(nullptr));
 
@@ -50,21 +53,35 @@ int randint(int a, int b) {
     int w = (_g() << 31LL) ^ _g(); 
     return a + abs(w) % (b - a + 1); 
 }
+
 class Point{
 	public:
 		int x = 0, y = 0, type = 0;
-		pair<int, int> neighbors[5] = {{0, INF}, {0, INF}, {0, INF}, {0, INF}, {0, INF}};
+		pair<int, int> neighbors[5] = {{0, INF}, {0, INF}, 
+							{0, INF}, {0, INF}, {0, INF}};
+
 		Point() {}
 		Point(int x, int y) {
 			this -> x = x;
 			this -> y = y;
 		}
+
 		void show() {
 			cout << this -> x << " " << this -> y << endl;
 		}
+
+		void show(string file) {
+			ofstream fout;
+			fout.open(file);
+			fout << this -> x << " " << this -> y << endl;
+			
+		}
+
 		int latest(int num) {
 			return (this -> neighbors)[num].sec;
 		}
+
+
 		void insert_neighbor(pair<int, int> neighbor) {
 			if ((this -> neighbors)[4].sec < neighbor.sec) return;
 			(this -> neighbors)[4] = neighbor;
@@ -77,41 +94,85 @@ class Point{
 
 };
 
+class SetPoints{
+	public:
+		vector <Point> mas;
+		int size;
+		void scan(string file) {
+			ifstream fin;
+			fin.open(file);
+			int x, y;
+			while (fin >> x) {
+				fin >> y;
+				Point a(x, y);
+				mas.pb(a);
+			}
+			size = mas.size();
+			cout << size;
+			fin.close();
+		}
+
+		void fill_neighbors() {
+			for (int i = 0; i < mas.size(); i++) {
+				for (int j = 0; j < mas.size(); j++) {
+					if (i == j) continue;
+					int d = dist((this -> mas)[i], (this -> mas)[j]);
+					(this -> mas)[i].insert_neighbor({j, d});
+				}
+			}
+		}
+
+		void sorting() {
+			sort(mas.begin(), mas.end(), comp);
+		}
+
+		void print() {
+			ofstream fout;
+			fout.open("dist_to_neighbour.txt");
+			for (int i = 0; i < mas.size(); i++) {
+				fout << i + 1 << " " << mas[i].latest(4) << endl;
+			}
+			fout.close();
+		}
+
+};
+
 
 class Shell{
 	public:
 		vector <Point> points;
 
-		void get() {
+		void get(string file) {
 			ifstream fin;
-			fin.open("shells.txt");
+			fin.open(file);
 			int x, y;
 			while (fin >> x, x != -1) {
 				fin >> y;
 				Point p(x, y);
 				points.pb(p);
 			}
+			fin.close();
 		}
 		void show() {
-			for (auto i : this -> points) {
+			for (auto i : (this -> points)) {
 				i.show();
 			}
 		}
-		void fill(int min_x, int max_x, int min_y, int max_y) {
+		void fill(int min_x, int max_x, int min_y, int max_y, int color) {
 			ofstream fout;
-			fout.open("data_dbscan.txt");
+			fout.open("data_dbscan.txt", ios::app);
 			
-			for (int i = 0, x, y; i < 10000; i++) {
+			for (int i = 0, x, y; i < 5000; i++) {
 				x = randint(min_x, max_x);
 				y = randint(min_y, max_y);
 				Point l, r, a(x, y);
 				int up = 0;
-				for (int i = 0; i < (this -> points).size(); i++) {
+				for (int i = 0; i < points.size(); i++) {
 					l = points[i];
-					r = points[(i + 1) % (this -> points).size()];
+					r = points[(i + 1) % points.size()];
 					if (l.x > r.x) {
-						r = (this -> points)[i];
-						l = (this ->points)[(i + 1) % (this -> points).size()];
+						r = points[i];
+						l = points[(i + 1) % points.size()];
 					}
 					if (l.x >= a.x || a.x >= r.x) {
 						if (l.x == a.x && r.x != a.x && l.y > a.y) {
@@ -124,12 +185,10 @@ class Shell{
 					} 
 				}
 				if (up % 2 != 0) {
-					fout << a.x << " " << a.y << " 50\n";
+					fout << a.x << " " << a.y << " " << color << "\n";
 				}
 			}
-			for (auto i : points) {
-				fout << i.x << " " << i.y << " " << "20\n";
-			}
+			fout.close();
 		}
 
 };
@@ -138,37 +197,70 @@ class Menu{
 	public:
 		void start() {
 			vector <Shell> Shells;
+
+			//clean file
+			ofstream fout;
+			fout.open("data_dbscan.txt");
+			fout.close();
+
+
 			while(1) {
-				cout << "Press 1 to generate random of 1000 points\n";
-				cout << "Press 2 to form your shell\n";
-				cout << "Press 3 to fill shells\n";
-				cout << "Press 4 to exit\n";
+				cout << "Press 1 to generate n random points\n";
+				cout << "Press 2 to get your shells and fill them\n";
+				cout << "Press 3 to find clasters\n";
+				cout << "Press 9 to exit\n";
 				char t;
 				cin >> t;
 				if (t == '1') {
+					cout << "Press how much points do you want\n";
 					ofstream fout;
-					fout.open("input.txt");
-					for (int i = 0; i < 1000; i++) {
+					fout.open("data_dbscan.txt", ios::app);
+					int num;
+					cin >> num;
+					int color = 20;
+					for (int i = 0; i < num; i++) {
 						fout << randint(1, 500) << " ";
-						fout << randint(1, 500) << "\n";
+						fout << randint(1, 500) << " ";
+						fout << color << "\n";
 					}
+					fout.close();
 				} else if (t == '2') {
-					cout << "Indicate your points, press -1 finish\n";
-					Shell a;
-					a.get();
-					Shells.pb(a);
-				} else if (t == '3') {
-					for (auto i : Shells) {
-						i.fill(0, 500, 0, 500);
+					vector <string> files = {"shell1.txt", "shell2.txt"};
+					int color = 50;
+					for (int i = 0; i < files.size(); i++) {
+						Shell a;
+						a.get(files[i]);
+						a.fill(0, 500, 0, 500, color);
+						Shells.pb(a);
+						color -= 10;
 					}
-				} else if (t == '4') {
+				} else if (t == '3') {
+					string file = copy_points_from("data_dbscan.txt");
+					SetPoints s;
+					s.scan(file);
+					s.fill_neighbors();
+					s.sorting();
+					s.print();
+				} else if (t == '9') {
 					break;
 				}
 			}
-			for (auto i : Shells) {
-				i.show();
+		}
+	private:
+		string copy_points_from(string file) {
+			ifstream fin;
+			fin.open(file);
+			string output = "data.txt";
+			ofstream fout;
+			fout.open(output);
+			int x, y, color;
+			while (fin >> x) {
+				fin >> y >> color;
+				fout << x << " " << y << "\n";
 			}
-			
+			fin.close();
+			fout.close();
+			return output;
 		}
 };
 
@@ -185,53 +277,8 @@ int vect_comp(Point a, Point b, Point p) {
 }
 
 
-class SetPoints{
-	public:
-		vector <Point> mas;
-		int size;
-		void scan(string file) {
-			ifstream fin;
-			fin.open(file);
-			fin >> this -> size;
-			(this -> mas).resize(this -> size);
-			for (int i = 0; i < (this -> size); i++) {
-				fin >> (this -> mas)[i].x >> (this -> mas)[i].y;
-			}
-		}
-
-		void fill_neighbors() {
-			for (int i = 0; i < (this -> size); i++) {
-				for (int j = 0; j < (this -> size); j++) {
-					if (i == j) continue;
-					int d = dist((this -> mas)[i], (this -> mas)[j]);
-					(this -> mas)[i].insert_neighbor({j, d});
-				}
-			}
-		}
-		void sorting() {
-			sort(mas.begin(), mas.end(), comp);
-		}
-		void print() {
-			for (auto i : mas) {
-				cout << i.latest(4) << endl;
-			}
-		}
-
-};
-
-
 int main() {
-	string file = "input.txt";
 	Menu men1;
 	men1.start();
-	return 0;
-	SetPoints s;
-	Point t1(1, 3), t2(3, 3), p(2, 2);
-	cout << vect_comp(t2, t1, p) << "\n";
-	return 0;
-	s.scan(file);
-	s.fill_neighbors();
-	s.sorting();
-	s.print();
 	return 0;
 }
