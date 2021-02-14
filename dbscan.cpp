@@ -40,6 +40,10 @@ const double DERIVATIVE = 0.5;
 using namespace std;
 //почему нельзя задать размер вектора в классе
 
+vector <string> files = {"shells/shell1.txt", 
+						"shells/shell2.txt", 
+						"shells/shell3.txt"};
+
 class Menu;
 class Shell;
 class Point;
@@ -61,7 +65,7 @@ class Point{
 		int type = 0;
 		bool used = false;
 		double x, y;
-		pair<int, double> neighbors[5] = {{0, INF}, {0, INF}, 
+		pair<int, double> neighbours[5] = {{0, INF}, {0, INF}, 
 							{0, INF}, {0, INF}, {0, INF}};
 
 		Point() {}
@@ -71,27 +75,27 @@ class Point{
 		}
 
 		void show() {
-			cout << this -> x << " " << this -> y << endl;
+			cout << x << " " << y << endl;
 		}
 
 		void show(string file) {
 			ofstream fout;
 			fout.open(file);
-			fout << this -> x << " " << this -> y << endl;
+			fout << x << " " << y << endl;
 			
 		}
 
 		double latest(int num) {
-			return (this -> neighbors)[num - 1].sec;
+			return (this -> neighbours)[num - 1].sec;
 		}
 
 
-		void insert_neighbour(pair<int, double> neighbor) {
-			if ((this -> neighbors)[4].sec < neighbor.sec) return;
-			(this -> neighbors)[4] = neighbor;
+		void insert_neighbour(pair<int, double> neighbour) {
+			if ((this -> neighbours)[4].sec < neighbour.sec) return;
+			(this -> neighbours)[4] = neighbour;
 			for (int i = 4; i > 0; i--) {
-				if ((this -> neighbors)[i].sec < (this -> neighbors)[i - 1].sec) {
-					swap((this -> neighbors)[i], (this -> neighbors)[i - 1]);
+				if ((this -> neighbours)[i].sec < (this -> neighbours)[i - 1].sec) {
+					swap((this -> neighbours)[i], (this -> neighbours)[i - 1]);
 				}
 			}
 		}
@@ -103,6 +107,7 @@ class SetPoints{
 		vector <Point> mas;
 		vector <double> distanses;
 		int size;
+
 		void scan(string file) {
 			ifstream fin;
 			fin.open(file);
@@ -113,11 +118,10 @@ class SetPoints{
 				mas.pb(a);
 			}
 			size = mas.size();
-			cout << size;
 			fin.close();
 		}
 
-		void fill_neighbors() {
+		void fill_neighbours() {
 			for (int i = 0; i < mas.size(); i++) {
 				for (int j = 0; j < mas.size(); j++) {
 					if (i == j) continue;
@@ -127,12 +131,7 @@ class SetPoints{
 			}
 		}
 
-		/*void sorting() {
-			//change this place
-			sort(mas.begin(), mas.end(), comp);
-		}*/
-
-		void print() {
+		void print_distances() {
 			ofstream fout;
 			fout.open("dist_to_neighbour.txt");
 			
@@ -141,6 +140,7 @@ class SetPoints{
 			}
 			fout.close();
 		}
+
 		void print_answer() {
 			ofstream fout;
 			fout.open("output.txt");
@@ -150,6 +150,7 @@ class SetPoints{
 			}
 			fout.close();
 		}
+
 		double find_optimal_dist() {
 			distanses.resize(mas.size());
 			for (int i = 0; i < distanses.size(); i++) {
@@ -159,7 +160,6 @@ class SetPoints{
 			int dX = distanses.size() / 50;
 			int step = distanses.size() / 100;
 			double dist = 0.0;
-			//cout << "MAS.SIZE(): " << distanses.size() << "\n";
 			for (int i = 0; i < distanses.size(); i += step) {
 				if (i + dX >= distanses.size()) {
 					dist = distanses[i];
@@ -167,7 +167,6 @@ class SetPoints{
 				}
 				double dY = distanses[i + dX] - distanses[i];
 				double der = dY/dX;
-				//cout << "der: " << der << "\n";
 				if (der >= DERIVATIVE) {
 					dist = distanses[i];
 					return dist;
@@ -175,8 +174,10 @@ class SetPoints{
 			}
 			return dist;
 		}
+
 		void connect(double dist) {
 			int CLASTER_NUM = 1;
+			//определяем и соеденяем основные точки
 			for (int i = 0; i < mas.size(); i++) {
 				if (mas[i].used) continue;
 				mas[i].used = true;
@@ -185,7 +186,27 @@ class SetPoints{
 					CLASTER_NUM++;
 				}
 			}
+
+			//добавляем пограничные точки
+			for (int i = 0; i < mas.size(); i++) {
+				if (!mas[i].type) {
+					for (int j = 0; j < 4; j++) {
+						pair <int, double> neighbour = mas[i].neighbours[j];
+						if (neighbour.sec > dist) {
+							break;
+						}
+						if (mas[neighbour.fir].latest(4) <= dist) {
+							cout << "insert borderline point: ";
+							mas[i].show();
+							mas[i].type = mas[neighbour.fir].type;
+							break;
+						}
+					}
+				}
+			}
+
 		}
+
 		void dfs(int num, int col, double dist) {
 			mas[num].used = true;
 			if (mas[num].latest(4) > dist) {
@@ -211,18 +232,20 @@ class Shell{
 			ifstream fin;
 			fin.open(file);
 			double x, y;
-			while (fin >> x, x != -1) {
+			while (fin >> x) {
 				fin >> y;
 				Point p(x, y);
 				points.pb(p);
 			}
 			fin.close();
 		}
+
 		void show() {
 			for (auto i : (this -> points)) {
 				i.show();
 			}
 		}
+
 		void fill(double min_x, double max_x, double min_y, double max_y, int color) {
 			ofstream fout;
 			fout.open("data_dbscan.txt", ios::app);
@@ -291,7 +314,6 @@ class Menu{
 					}
 					fout.close();
 				} else if (t == '2') {
-					vector <string> files = {"shell1.txt", "shell2.txt"};
 					int color = 50;
 					for (int i = 0; i < files.size(); i++) {
 						Shell a;
@@ -304,10 +326,10 @@ class Menu{
 					string file = copy_points_from("data_dbscan.txt");
 					SetPoints s;
 					s.scan(file);
-					s.fill_neighbors();
+					s.fill_neighbours();
 					double dist = s.find_optimal_dist();
 					s.connect(dist);
-					s.print();
+					s.print_distances();
 					s.print_answer();
 				} else if (t == '9') {
 					break;
