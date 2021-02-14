@@ -34,20 +34,26 @@
 #define pb push_back
 
 const int INF = 1e9;
-const int MAX_RAND = 1e9;
+const int MAX_RAND = 32292;
 const double DERIVATIVE = 0.5;
+const int MAX_DOUBLE = 1e9;
 
 using namespace std;
 //почему нельзя задать размер вектора в классе
 
-vector <string> files = {"shells/shell1.txt", 
-						"shells/shell2.txt", 
-						"shells/shell3.txt"};
+/*vector <string> files = {	"shells/shell1.txt", 
+							"shells/shell2.txt", 
+							"shells/shell3.txt"};*/
+
+vector <string> files = {	"shells/shell4.txt", 
+							"shells/shell5.txt",
+							"shells/shell6.txt"};
 
 class Menu;
 class Shell;
 class Point;
 class SetPoints;
+double randDouble(double min, double max);
 bool comp(Point a, Point b);
 double distAB(Point a, Point b);
 double vect_comp(Point a, Point b, Point p);
@@ -62,16 +68,25 @@ int randint(int a, int b) {
 
 class Point{
 	public:
+		//наследовать class center от point с полем sum_distance
+		double lenX = 0.0, lenY = 0.0;
+		int qX = 0, qY = 0;
+
 		int type = 0;
 		bool used = false;
-		double x, y;
+		double x, y, dist_to_center = MAX_DOUBLE;
 		pair<int, double> neighbours[5] = {{0, INF}, {0, INF}, 
 							{0, INF}, {0, INF}, {0, INF}};
+
 
 		Point() {}
 		Point(double x, double y) {
 			this -> x = x;
 			this -> y = y;
+		}
+		Point(double minX, double maxX, double minY, double maxY) {
+			x = randDouble(minX, maxX);
+			y = randDouble(minY, maxY);
 		}
 
 		void show() {
@@ -86,16 +101,16 @@ class Point{
 		}
 
 		double latest(int num) {
-			return (this -> neighbours)[num - 1].sec;
+			return neighbours[num - 1].sec;
 		}
 
 
 		void insert_neighbour(pair<int, double> neighbour) {
-			if ((this -> neighbours)[4].sec < neighbour.sec) return;
-			(this -> neighbours)[4] = neighbour;
+			if (neighbours[4].sec < neighbour.sec) return;
+			neighbours[4] = neighbour;
 			for (int i = 4; i > 0; i--) {
-				if ((this -> neighbours)[i].sec < (this -> neighbours)[i - 1].sec) {
-					swap((this -> neighbours)[i], (this -> neighbours)[i - 1]);
+				if (neighbours[i].sec < neighbours[i - 1].sec) {
+					swap(neighbours[i], neighbours[i - 1]);
 				}
 			}
 		}
@@ -106,6 +121,7 @@ class SetPoints{
 	public:
 		vector <Point> mas;
 		vector <double> distanses;
+		vector <Point> centers;
 		int size;
 
 		void scan(string file) {
@@ -125,7 +141,7 @@ class SetPoints{
 			for (int i = 0; i < mas.size(); i++) {
 				for (int j = 0; j < mas.size(); j++) {
 					if (i == j) continue;
-					double d = distAB((this -> mas)[i], mas[j]);
+					double d = distAB(mas[i], mas[j]);
 					mas[i].insert_neighbour({j, d});
 				}
 			}
@@ -147,6 +163,15 @@ class SetPoints{
 			for (int i = 0; i < mas.size(); i++) {
 				fout << mas[i].x << " " << mas[i].y << " ";
 				fout << mas[i].type * 10 << "\n";
+			}
+			fout.close();
+		}
+
+		void print_centers() {
+			ofstream fout;
+			fout.open("output.txt", ios::app);
+			for (int i = 0; i < centers.size(); i++) {
+				fout << centers[i].x << " " << centers[i].y << " 0\n";
 			}
 			fout.close();
 		}
@@ -175,8 +200,9 @@ class SetPoints{
 			return dist;
 		}
 
-		void connect(double dist) {
+		void connect_points(double dist) {
 			int CLASTER_NUM = 1;
+
 			//определяем и соеденяем основные точки
 			for (int i = 0; i < mas.size(); i++) {
 				if (mas[i].used) continue;
@@ -221,6 +247,38 @@ class SetPoints{
 			}
 		}
 
+		void make_centers(int num) {
+			centers.resize(num);
+			for (int i = 0; i < num; i++) {
+				Point a(0, 500, 0, 500);
+				centers[i] = a;
+			}
+			for (auto i : centers) {
+				cout << "random center: ";
+				i.show();
+			}
+			for (int k = 1; k <= 10; k++) {
+				for (int i = 0; i < mas.size(); i++) {
+					mas[i].dist_to_center = 1e9;
+					for (int j = 0; j < centers.size(); j++) {
+						if (distAB(mas[i], centers[j]) < mas[i].dist_to_center) {
+							mas[i].dist_to_center = distAB(mas[i], centers[j]);
+							mas[i].type = j + 1;
+						}
+					}
+					centers[mas[i].type - 1].lenX += mas[i].x;
+					centers[mas[i].type - 1].lenY += mas[i].y;
+					centers[mas[i].type - 1].qX++;
+					centers[mas[i].type - 1].qY++;
+				}
+				if (k == 10) continue;
+				for (int i = 0; i < num; i++) {
+					centers[i].x = centers[i].lenX / centers[i].qX;
+					centers[i].y = centers[i].lenY / centers[i].qY;
+				}	
+			}
+		}
+
 };
 
 
@@ -241,7 +299,7 @@ class Shell{
 		}
 
 		void show() {
-			for (auto i : (this -> points)) {
+			for (auto i : points) {
 				i.show();
 			}
 		}
@@ -252,8 +310,8 @@ class Shell{
 			
 			for (int i = 0; i < 5000; i++) {
 				double x, y;
-				x = min_x + (max_x - min_x) * (double)(rand() % RAND_MAX) / RAND_MAX;
-				y = min_y + (max_y - min_y) * (double)(rand() % RAND_MAX) / RAND_MAX;
+				x = randDouble(min_x, max_x);
+				y = randDouble(min_y, max_y);;
 				Point l, r, a(x, y);
 				int up = 0;
 				for (int i = 0; i < points.size(); i++) {
@@ -296,7 +354,8 @@ class Menu{
 			while(1) {
 				cout << "Press 1 to generate n random points\n";
 				cout << "Press 2 to get your shells and fill them\n";
-				cout << "Press 3 to find clasters\n";
+				cout << "Press 3 to find clasters with dbscan\n";
+				cout << "Press 4 to find claster with k-means\n";
 				cout << "Press 9 to exit\n";
 				char t;
 				cin >> t;
@@ -308,12 +367,13 @@ class Menu{
 					cin >> num;
 					int color = 20;
 					for (int i = 0; i < num; i++) {
-						fout << (double) (rand() % 500 + rand() / MAX_RAND) << " ";
-						fout << (double) (rand() % 500 + rand() / MAX_RAND) << " ";
+						fout << randDouble(0.0, 500.0) << " ";
+						fout << randDouble(0.0, 500.0) << " ";
 						fout << color << "\n";
 					}
 					fout.close();
-				} else if (t == '2') {
+				} 
+				else if (t == '2') {
 					int color = 50;
 					for (int i = 0; i < files.size(); i++) {
 						Shell a;
@@ -322,16 +382,29 @@ class Menu{
 						Shells.pb(a);
 						color -= 10;
 					}
-				} else if (t == '3') {
+				} 
+				else if (t == '3') {
 					string file = copy_points_from("data_dbscan.txt");
 					SetPoints s;
 					s.scan(file);
 					s.fill_neighbours();
 					double dist = s.find_optimal_dist();
-					s.connect(dist);
+					s.connect_points(dist);
 					s.print_distances();
 					s.print_answer();
-				} else if (t == '9') {
+				} 
+				else if (t == '4') {
+					cout << "Enter how many clasters do you want to find\n";
+					int num;
+					cin >> num;
+					string file = copy_points_from("data_dbscan.txt");
+					SetPoints s;
+					s.scan(file);
+					s.make_centers(num);
+					s.print_answer();
+					s.print_centers();
+				}
+				else if (t == '9') {
 					break;
 				}
 			}
@@ -356,6 +429,10 @@ class Menu{
 			return output;
 		}
 };
+
+double randDouble(double min, double max) {
+	return min + (max - min) * (double)(abs(rand()) % RAND_MAX) / RAND_MAX;
+}
 
 bool comp(Point a, Point b) {
 	return a.latest(4) < b.latest(4);
