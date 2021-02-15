@@ -123,6 +123,9 @@ class SetPoints{
 		vector <Point> mas;
 		vector <double> distanses;
 		vector <Point> centers;
+		vector <vector <Point>> matr_dist;
+		vector <pair<double, pair<int, int>>> ribs;
+
 		int size;
 
 		void scan(string file) {
@@ -280,6 +283,20 @@ class SetPoints{
 			}
 		}
 
+		void hierarchy() {
+			//matr_dist.resize(mas.size());
+			/*for (int i = 0; i < matr_dist.size(); i++) {
+				matr_dist[i].resize(matr_dist.size());
+			}*/
+			for (int i = 0; i < matr_dist.size(); i++) {
+				for (int j = i + 1; j < matr_dist.size(); j++) {
+					ribs.pb({distAB(mas[i], mas[j]), {i, j}});
+				}
+			}
+			sort(ribs.begin(), ribs.end());
+			
+		}
+
 };
 
 
@@ -357,6 +374,7 @@ class Menu{
 				cout << "Press 2 to get your shells and fill them\n";
 				cout << "Press 3 to find clasters with dbscan\n";
 				cout << "Press 4 to find claster with k-means\n";
+				cout << "Press 5 to find claster with hierarchy\n";
 				cout << "Press 9 to exit\n";
 				char t;
 				cin >> t;
@@ -404,6 +422,12 @@ class Menu{
 					s.make_centers(num);
 					s.print_answer();
 					s.print_centers();
+				}
+				else if (t == '5') {
+					string file = copy_points_from("data_dbscan.txt");
+					SetPoints s;
+					s.scan(file);
+					s.hierarchy();
 				}
 				else if (t == '9') {
 					break;
