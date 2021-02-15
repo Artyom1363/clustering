@@ -37,17 +37,18 @@ const int INF = 1e9;
 const int MAX_RAND = 32292;
 const double DERIVATIVE = 0.5;
 const int MAX_DOUBLE = 1e9;
+const int DENSITY = 7000;
 
 using namespace std;
 //почему нельзя задать размер вектора в классе
 
-/*vector <string> files = {	"shells/shell1.txt", 
+vector <string> files = {	"shells/shell1.txt", 
 							"shells/shell2.txt", 
-							"shells/shell3.txt"};*/
+							"shells/shell3.txt"};
 
-vector <string> files = {	"shells/shell4.txt", 
+/*vector <string> files = {	"shells/shell4.txt", 
 							"shells/shell5.txt",
-							"shells/shell6.txt"};
+							"shells/shell6.txt"};*/
 
 class Menu;
 class Shell;
@@ -257,7 +258,7 @@ class SetPoints{
 				cout << "random center: ";
 				i.show();
 			}
-			for (int k = 1; k <= 10; k++) {
+			for (int k = 1; k <= 100; k++) {
 				for (int i = 0; i < mas.size(); i++) {
 					mas[i].dist_to_center = 1e9;
 					for (int j = 0; j < centers.size(); j++) {
@@ -308,7 +309,7 @@ class Shell{
 			ofstream fout;
 			fout.open("data_dbscan.txt", ios::app);
 			
-			for (int i = 0; i < 5000; i++) {
+			for (int i = 0; i < DENSITY; i++) {
 				double x, y;
 				x = randDouble(min_x, max_x);
 				y = randDouble(min_y, max_y);;
