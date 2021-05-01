@@ -60,12 +60,66 @@ double distAB(Point a, Point b);
 double vect_comp(Point a, Point b, Point p);
 
 
+int positive_int(string s);
+int check_in_set(string s, set <int> set_of_elems);
+
+
 mt19937 _g(time(nullptr));
 
 int randint(int a, int b) {
     int w = (_g() << 31LL) ^ _g(); 
     return a + abs(w) % (b - a + 1); 
 }
+
+
+int getInt(string message) {
+	int num = 0;
+	bool fl = false;
+	while (true) {
+		fl = false;
+		try {
+			cout << message;
+			string s;
+			cin >> s;
+			num = stoi(s);
+		}
+		catch (...) {
+			cout << "Your answere must be int, please try again\n";
+			fl = true;
+		}	
+		if (!fl) {
+			return num;
+		}
+	}
+}
+
+
+int check_in_set(string s, set <int> set_of_elems) {
+	int res = positive_int(s);
+	if (res == -1) return -1;
+	int start = set_of_elems.size();
+	set_of_elems.insert(res);
+	//cout << "yes\n";
+	if (set_of_elems.size() > start) {
+		return -1;
+	}
+	return res;
+}
+
+int positive_int(string s) {
+	for (auto i : s) {
+		if (!(i >= '0' && i <= '9')) {
+			return -1;
+		}
+	}
+	int res = 0;
+	for (int i = 0; i < s.size(); ++i) {
+		res *= 10;
+		res += s[i] - '0';
+	}
+	return res;
+}
+
 
 class Point{
 	public:
@@ -118,6 +172,70 @@ class Point{
 
 };
 
+
+class Cloud{
+public:
+	int X_center, Y_center;
+	vector <Point> vect_of_points;
+	
+	Cloud() {
+		X_center = 0;
+		Y_center = 0;
+	}
+
+	void genPoints(int size, int height, int weight) {
+
+		std::default_random_engine generator;
+
+	  	//first param is mean, second is standart diviation
+	  	std::normal_distribution<double> distributionX(0.0, weight/2.0);
+	  	std::normal_distribution<double> distributionY(0.0, height/2.0);
+
+	  	for (int i = 0; i < size; ++i) {
+	    	double x = distributionX(generator);
+	    	double y = distributionY(generator);
+	    	Point p(x + X_center, y + Y_center);
+	    	vect_of_points.pb(p);
+	    }
+
+	}
+
+	void move() {
+		int x_bias, y_bias;
+		cout << "Enter bias x (more 0 means to right, less than 0 means to left)\n";
+		cin >> x_bias;
+		cout << "Enter bias y (more 0 means to upper, less than 0 means to down)\n";
+		cin >> y_bias;
+		for (auto &i : vect_of_points) {
+			i.x += x_bias;
+			i.y += y_bias;
+		}
+		cout << "Your cloud moved\n";
+
+	}
+
+
+
+	vector <Point> getPoints() {
+		int size, height, weight;
+		cout << "Enter how many points will be in cloud\n"; cin >> size;
+		cout << "Enter height of cloud\n"; cin >> height;
+		cout << "Enter weight of cloud\n"; cin >> weight;
+		cout << "Enter x coordinate of cloud\n"; cin >> X_center;
+		cout << "Enter y coordinate of cloud\n"; cin >> Y_center;
+		genPoints(size, height, weight);
+		move();
+		return vect_of_points;
+	}
+
+private:
+	void print_menu() {
+		cout << "Enter -1 ";
+	}
+
+};
+
+//field
 class SetPoints{
 	public:
 		vector <Point> mas;
@@ -141,6 +259,37 @@ class SetPoints{
 			fin.close();
 		}
 
+		void makeRandomPoints() {
+			int size, left, right, upper, down;
+			cout << "Enter how many points do you want\n"; cin >> size;
+			cout << "Enter left positions\n"; cin >> left;
+			cout << "Enter right position\n"; cin >> right;
+			cout << "Enter upper position\n"; cin >> upper;
+			cout << "Enter down position\n"; cin >> down;
+			for (int i = 0; i < size; ++i) {
+				Point point;
+				point.x = randDouble(left, right);
+				point.y = randDouble(down, upper);
+				mas.push_back(point);
+			}
+		}
+
+
+
+		void genSetPoints() {
+
+			Cloud cloud;
+			vector <Point> points_from_new_cloud;
+			points_from_new_cloud = cloud.getPoints();
+
+			for (auto i : points_from_new_cloud) {
+				mas.push_back(i);
+			}
+
+		}
+
+
+
 		void fill_neighbours() {
 			for (int i = 0; i < mas.size(); i++) {
 				for (int j = 0; j < mas.size(); j++) {
@@ -161,14 +310,21 @@ class SetPoints{
 			fout.close();
 		}
 
-		void print_answer() {
+		void print_answer(string file = "output.txt") {
+
 			ofstream fout;
-			fout.open("output.txt");
+			fout.open(file);
+
+			//debug
+			
 			for (int i = 0; i < mas.size(); i++) {
 				fout << mas[i].x << " " << mas[i].y << " ";
 				fout << mas[i].type * 10 << "\n";
 			}
 			fout.close();
+
+			//debug
+			cout << "anwere is situated in " << file << "\n\n\n";
 		}
 
 		void print_centers() {
@@ -182,12 +338,14 @@ class SetPoints{
 
 		double find_optimal_dist() {
 			distanses.resize(mas.size());
+
 			for (int i = 0; i < distanses.size(); i++) {
 				distanses[i] = mas[i].latest(4);
 			}
+
 			sort(distanses.begin(), distanses.end());
 			int dX = distanses.size() / 50;
-			int step = distanses.size() / 100;
+			int step = max(1, (int)(distanses.size() / 100));
 			double dist = 0.0;
 			for (int i = 0; i < distanses.size(); i += step) {
 				if (i + dX >= distanses.size()) {
@@ -288,13 +446,19 @@ class SetPoints{
 			/*for (int i = 0; i < matr_dist.size(); i++) {
 				matr_dist[i].resize(matr_dist.size());
 			}*/
-			for (int i = 0; i < matr_dist.size(); i++) {
-				for (int j = i + 1; j < matr_dist.size(); j++) {
+			cout << "yes" << endl;
+			for (int i = 0; i < mas.size(); i++) {
+				for (int j = i + 1; j < mas.size(); j++) {
 					ribs.pb({distAB(mas[i], mas[j]), {i, j}});
 				}
 			}
 			sort(ribs.begin(), ribs.end());
-			
+			ofstream fout;
+			fout.open("hier_dist.txt");
+			for (int i = 0; i < ribs.size(); i++) {
+				fout << i + 1 << " " << ribs[i].fir << endl;
+			}
+			fout.close();
 		}
 
 };
@@ -359,100 +523,100 @@ class Shell{
 };
 
 class Menu{
-	public:
-		void start() {
-			vector <Shell> Shells;
+public:
+	SetPoints s;
+	void start() {
+		vector <Shell> Shells;
 
-			//clean file
-			ofstream fout;
-			fout.open("data_dbscan.txt");
-			fout.close();
+		//clean file
+		ofstream fout;
+		fout.open("data_dbscan.txt");
+		fout.close();
+
+		cout << "To see the result you must set this settings to console:\n";
+		cout << "gnuplot\nset xrange [-200:200]\nset yrange [-200:200]\n";
+		//cout << "set title "set palette defined ( 20 \"#101010\", 30 \"#ff0000\", 40 \"#00ff00\", 50 \"#e0e0e0\" )""
+
+		while(1) {
+
+			cout << "Press 1 to generate n random points\n";
+			cout << "Press 2 to make cloud of points\n";
+			cout << "Press 3 to find clasters with dbscan\n";
+			cout << "Press 4 to find claster with k-means\n";
+			cout << "Press 5 to find claster with hierarchy\n";
+			cout << "Press 9 to exit\n";
 
 
-			while(1) {
-				cout << "Press 1 to generate n random points\n";
-				cout << "Press 2 to get your shells and fill them\n";
-				cout << "Press 3 to find clasters with dbscan\n";
-				cout << "Press 4 to find claster with k-means\n";
-				cout << "Press 5 to find claster with hierarchy\n";
-				cout << "Press 9 to exit\n";
-				char t;
-				cin >> t;
-				if (t == '1') {
-					cout << "Press how much points do you want\n";
-					ofstream fout;
-					fout.open("data_dbscan.txt", ios::app);
-					int num;
-					cin >> num;
-					int color = 20;
-					for (int i = 0; i < num; i++) {
-						fout << randDouble(0.0, 500.0) << " ";
-						fout << randDouble(0.0, 500.0) << " ";
-						fout << color << "\n";
-					}
-					fout.close();
-				} 
-				else if (t == '2') {
-					int color = 50;
-					for (int i = 0; i < files.size(); i++) {
-						Shell a;
-						a.get(files[i]);
-						a.fill(0, 500, 0, 500, color);
-						Shells.pb(a);
-						color -= 10;
-					}
-				} 
-				else if (t == '3') {
-					string file = copy_points_from("data_dbscan.txt");
-					SetPoints s;
-					s.scan(file);
-					s.fill_neighbours();
-					double dist = s.find_optimal_dist();
-					s.connect_points(dist);
-					s.print_distances();
-					s.print_answer();
-				} 
-				else if (t == '4') {
-					cout << "Enter how many clasters do you want to find\n";
-					int num;
-					cin >> num;
-					string file = copy_points_from("data_dbscan.txt");
-					SetPoints s;
-					s.scan(file);
-					s.make_centers(num);
-					s.print_answer();
-					s.print_centers();
-				}
-				else if (t == '5') {
-					string file = copy_points_from("data_dbscan.txt");
-					SetPoints s;
-					s.scan(file);
-					s.hierarchy();
-				}
-				else if (t == '9') {
-					break;
-				}
+			char t;
+			cin >> t;
+			if (t == '1') {
+				s.makeRandomPoints();
+			} 
+			else if (t == '2') {
+
+				s.genSetPoints();
+
+			} 
+			else if (t == '3') {
+
+				//calculate distances to each points
+				s.fill_neighbours();
+
+				//find optimal dist
+				double dist = s.find_optimal_dist();
+
+				//connects poitns to clasters
+				s.connect_points(dist);
+
+				//for debug;
+				//s.print_distances();
+
+				//make result file
+				string file = "data_dbscan.txt";
+				s.print_answer(file);
+
+			}
+			else if (t == '4') {
+				cout << "Enter how many clasters do you want to find\n";
+				int num;
+				cin >> num;
+				string file = copy_points_from("data_dbscan.txt");
+				SetPoints s;
+				s.scan(file);
+				s.make_centers(num);
+				s.print_answer();
+				s.print_centers();
+			}
+			else if (t == '5') {
+				string file = copy_points_from("data_dbscan.txt");
+				SetPoints s;
+				s.scan(file);
+				s.hierarchy();
+			}
+			else if (t == '9') {
+				break;
 			}
 		}
-	private:
-		string copy_points_from(string file) {
-			ifstream fin;
-			fin.open(file);
-			string output = "data.txt";
-			ofstream fout;
-			fout.open(output);
-			fout.setf(ios::fixed);
-			fout.precision(7);
-			int color;
-			double x, y;
-			while (fin >> x) {
-				fin >> y >> color;
-				fout << x << " " << y << "\n";
-			}
-			fin.close();
-			fout.close();
-			return output;
+	}
+private:
+	string copy_points_from(string file) {
+		ifstream fin;
+		fin.open(file);
+		string output = "data.txt";
+		ofstream fout;
+		fout.open(output);
+		fout.setf(ios::fixed);
+		fout.precision(7);
+		int color;
+		double x, y;
+		while (fin >> x) {
+			fin >> y >> color;
+			fout << x << " " << y << "\n";
 		}
+		fin.close();
+		fout.close();
+		return output;
+	}
 };
 
 double randDouble(double min, double max) {
@@ -463,7 +627,7 @@ bool comp(Point a, Point b) {
 	return a.latest(4) < b.latest(4);
 }
 
-double distAB(Point a, Point b) {
+double distAB(Point a, Point b) {  
 	return sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
 }
 
