@@ -72,19 +72,21 @@ int randint(int a, int b) {
 }
 
 
-int getInt(string message) {
+int getInt(int min, int max) {
 	int num = 0;
 	bool fl = false;
 	while (true) {
 		fl = false;
 		try {
-			cout << message;
 			string s;
 			cin >> s;
 			num = stoi(s);
+			if (num < min || num > max) {
+				throw 1;
+			}
 		}
 		catch (...) {
-			cout << "Your answere must be int, please try again\n";
+			cout << "Your answere must be 'int' and belong: [" << min << ", " << max << "]\n";
 			fl = true;
 		}	
 		if (!fl) {
@@ -106,6 +108,7 @@ int check_in_set(string s, set <int> set_of_elems) {
 	return res;
 }
 
+
 int positive_int(string s) {
 	for (auto i : s) {
 		if (!(i >= '0' && i <= '9')) {
@@ -122,53 +125,54 @@ int positive_int(string s) {
 
 
 class Point{
-	public:
-		//наследовать class center от point с полем sum_distance
-		double lenX = 0.0, lenY = 0.0;
-		int qX = 0, qY = 0;
+public:
+	//наследовать class center от point с полем sum_distance
+	double lenX = 0.0, lenY = 0.0;
+	int qX = 0, qY = 0;
 
-		int type = 0;
-		bool used = false;
-		double x, y, dist_to_center = MAX_DOUBLE;
-		pair<int, double> neighbours[5] = {{0, INF}, {0, INF}, 
-							{0, INF}, {0, INF}, {0, INF}};
-
-
-		Point() {}
-		Point(double x, double y) {
-			this -> x = x;
-			this -> y = y;
-		}
-		Point(double minX, double maxX, double minY, double maxY) {
-			x = randDouble(minX, maxX);
-			y = randDouble(minY, maxY);
-		}
-
-		void show() {
-			cout << x << " " << y << endl;
-		}
-
-		void show(string file) {
-			ofstream fout;
-			fout.open(file);
-			fout << x << " " << y << endl;
-			
-		}
-
-		double latest(int num) {
-			return neighbours[num - 1].sec;
-		}
+	int type = 0;
+	bool used = false;
+	double x, y, dist_to_center = MAX_DOUBLE;
+	pair<int, double> neighbours[5] = {{0, INF}, {0, INF}, 
+						{0, INF}, {0, INF}, {0, INF}};
 
 
-		void insert_neighbour(pair<int, double> neighbour) {
-			if (neighbours[4].sec < neighbour.sec) return;
-			neighbours[4] = neighbour;
-			for (int i = 4; i > 0; i--) {
-				if (neighbours[i].sec < neighbours[i - 1].sec) {
-					swap(neighbours[i], neighbours[i - 1]);
-				}
+	Point() {}
+	Point(double x, double y) {
+		this -> x = x;
+		this -> y = y;
+	}
+	Point(double minX, double maxX, double minY, double maxY) {
+		x = randDouble(minX, maxX);
+		y = randDouble(minY, maxY);
+	}
+
+	void show() {
+		cout << x << " " << y << endl;
+	}
+
+	void show(string file) {
+		ofstream fout;
+		fout.open(file, ios_base::app);
+		fout << x << " " << y << endl;
+		fout.close();
+		
+	}
+
+	double latest(int num) {
+		return neighbours[num - 1].sec;
+	}
+
+
+	void insert_neighbour(pair<int, double> neighbour) {
+		if (neighbours[4].sec < neighbour.sec) return;
+		neighbours[4] = neighbour;
+		for (int i = 4; i > 0; i--) {
+			if (neighbours[i].sec < neighbours[i - 1].sec) {
+				swap(neighbours[i], neighbours[i - 1]);
 			}
 		}
+	}
 
 };
 
@@ -189,7 +193,7 @@ public:
 		cout << "Enter height of cloud\n"; cin >> height;
 		cout << "Enter weight of cloud\n"; cin >> weight;
 		cout << "Enter x coordinate of center of cloud\n"; cin >> X_center;
-		cout << "Enter y coordinate of conter of cloud\n"; cin >> Y_center;
+		cout << "Enter y coordinate of center of cloud\n"; cin >> Y_center;
 		genPoints(size, height, weight);
 		move();
 		turn();
@@ -228,9 +232,10 @@ private:
 
 	}
 	void turn() {
-		double radians;
-		cout << "Enter degree in radians to move\n";
-		cin >> radians;
+		double radians, degrees;
+		cout << "Enter degree in degrees to move\n";
+		cin >> degrees;
+		radians = (degrees / 180.0) * M_PI; 
 		for (auto &i : vect_of_points) {
 			double x = i.x * cos(radians) - i.y * sin(radians);
 			double y = i.x * sin(radians) + i.y * cos(radians);
@@ -243,162 +248,217 @@ private:
 
 //field
 class SetPoints{
-	public:
-		vector <Point> mas;
-		//vector <vector <Point>> matr_dist;
-		vector <pair<double, pair<int, int>>> ribs;
+public:
+	vector <Point> mas;
+	//vector <vector <Point>> matr_dist;
+	vector <pair<double, pair<int, int>>> ribs;
 
-		int size;
+	int size;
 
-		void scan(string file) {
-			ifstream fin;
-			fin.open(file);
-			double x, y;
-			while (fin >> x) {
-				fin >> y;
-				Point a(x, y);
-				mas.pb(a);
-			}
-			size = mas.size();
-			fin.close();
+	void scanFromFile() {
+		string file;
+		cout << "Enter name of file to load data:\n";
+		cin >> file;
+		scan(file);
+	}
+
+
+	void printToFile() {
+		string file;
+		cout << "Enter name of file to write data:\n";
+		cin >> file;
+		print(file);
+	}
+
+	void makeRandomPoints() {
+		int size, left, right, upper, down;
+		cout << "Enter how many points do you want\n"; cin >> size;
+		cout << "Enter left positions\n"; cin >> left;
+		cout << "Enter right position\n"; cin >> right;
+		cout << "Enter down position\n"; cin >> upper;
+		cout << "Enter upper position\n"; cin >> down;
+
+		//check left < right
+		for (int i = 0; i < size; ++i) {
+			Point point;
+			point.x = randDouble(left, right);
+			point.y = randDouble(down, upper);
+			mas.push_back(point);
+		}
+	}
+
+
+	void genSetPoints() {
+
+		Cloud cloud;
+		vector <Point> points_from_new_cloud;
+		points_from_new_cloud = cloud.getPoints();
+
+		for (auto i : points_from_new_cloud) {
+			mas.push_back(i);
 		}
 
-		void makeRandomPoints() {
-			int size, left, right, upper, down;
-			cout << "Enter how many points do you want\n"; cin >> size;
-			cout << "Enter left positions\n"; cin >> left;
-			cout << "Enter right position\n"; cin >> right;
-			cout << "Enter upper position\n"; cin >> upper;
-			cout << "Enter down position\n"; cin >> down;
-			for (int i = 0; i < size; ++i) {
-				Point point;
-				point.x = randDouble(left, right);
-				point.y = randDouble(down, upper);
-				mas.push_back(point);
-			}
+	}
+
+
+	void print_answer(string file = "output.txt") {
+
+		ofstream fout;
+		fout.open(file);
+		for (int i = 0; i < mas.size(); i++) {
+			fout << mas[i].x << " " << mas[i].y << " ";
+			fout << mas[i].type * 10 << "\n";
 		}
+		fout.close();
 
 
-		void genSetPoints() {
+		cout << "answere is situated in " << file << "\n\n\n";
+	}
 
-			Cloud cloud;
-			vector <Point> points_from_new_cloud;
-			points_from_new_cloud = cloud.getPoints();
-
-			for (auto i : points_from_new_cloud) {
-				mas.push_back(i);
-			}
+private:
+	void scan(string file) {
+		ifstream fin;
+		fin.open(file);
+		double x, y;
+		while (fin >> x) {
+			fin >> y;
+			Point a(x, y);
+			mas.pb(a);
 		}
+		size = mas.size();
+		fin.close();
+	}
 
-
-		void print_distances() {
-			ofstream fout;
-			fout.open("dist_to_neighbour.txt");
-			
-			for (int i = 0; i < distanses.size(); i++) {
-				fout << i + 1 << " " << distanses[i] << endl;
-			}
-			fout.close();
+	void print(string file) {
+		for (auto &i : mas) {
+			i.show(file);
 		}
-
-
-		void print_answer(string file = "output.txt") {
-
-			ofstream fout;
-			fout.open(file);
-
-			//debug
-			
-			for (int i = 0; i < mas.size(); i++) {
-				fout << mas[i].x << " " << mas[i].y << " ";
-				fout << mas[i].type * 10 << "\n";
-			}
-			fout.close();
-
-			//debug
-			cout << "answere is situated in " << file << "\n\n\n";
-		}
-
-		
-		void hierarchy() {
-			//matr_dist.resize(mas.size());
-			/*for (int i = 0; i < matr_dist.size(); i++) {
-				matr_dist[i].resize(matr_dist.size());
-			}*/
-			cout << "yes" << endl;
-			for (int i = 0; i < mas.size(); i++) {
-				for (int j = i + 1; j < mas.size(); j++) {
-					ribs.pb({distAB(mas[i], mas[j]), {i, j}});
-				}
-			}
-			sort(ribs.begin(), ribs.end());
-			ofstream fout;
-			fout.open("hier_dist.txt");
-			for (int i = 0; i < ribs.size(); i++) {
-				fout << i + 1 << " " << ribs[i].fir << endl;
-			}
-			fout.close();
-		}
+	}
 
 };
 
 
 class Shell{
-	public:
-		vector <Point> points;
+public:
+	vector <Point> points;
 
-		void get(string file) {
-			ifstream fin;
-			fin.open(file);
+	void get(string file) {
+		ifstream fin;
+		fin.open(file);
+		double x, y;
+		while (fin >> x) {
+			fin >> y;
+			Point p(x, y);
+			points.pb(p);
+		}
+		fin.close();
+	}
+
+	void show() {
+		for (auto i : points) {
+			i.show();
+		}
+	}
+
+	void fill(double min_x, double max_x, double min_y, double max_y, int color) {
+		ofstream fout;
+		fout.open("data_dbscan.txt", ios::app);
+		
+		for (int i = 0; i < DENSITY; i++) {
 			double x, y;
-			while (fin >> x) {
-				fin >> y;
-				Point p(x, y);
-				points.pb(p);
-			}
-			fin.close();
-		}
-
-		void show() {
-			for (auto i : points) {
-				i.show();
-			}
-		}
-
-		void fill(double min_x, double max_x, double min_y, double max_y, int color) {
-			ofstream fout;
-			fout.open("data_dbscan.txt", ios::app);
-			
-			for (int i = 0; i < DENSITY; i++) {
-				double x, y;
-				x = randDouble(min_x, max_x);
-				y = randDouble(min_y, max_y);;
-				Point l, r, a(x, y);
-				int up = 0;
-				for (int i = 0; i < points.size(); i++) {
-					l = points[i];
-					r = points[(i + 1) % points.size()];
-					if (l.x > r.x) {
-						r = points[i];
-						l = points[(i + 1) % points.size()];
-					}
-					if (l.x >= a.x || a.x >= r.x) {
-						if (l.x == a.x && r.x != a.x && l.y > a.y) {
-							up++;
-						}
-						continue;
-					}
-					if (vect_comp(r, l, a) >= 0) {
+			x = randDouble(min_x, max_x);
+			y = randDouble(min_y, max_y);;
+			Point l, r, a(x, y);
+			int up = 0;
+			for (int i = 0; i < points.size(); i++) {
+				l = points[i];
+				r = points[(i + 1) % points.size()];
+				if (l.x > r.x) {
+					r = points[i];
+					l = points[(i + 1) % points.size()];
+				}
+				if (l.x >= a.x || a.x >= r.x) {
+					if (l.x == a.x && r.x != a.x && l.y > a.y) {
 						up++;
-					} 
+					}
+					continue;
 				}
-				if (up % 2 != 0) {
-					fout << a.x << " " << a.y << " " << color << "\n";
-				}
+				if (vect_comp(r, l, a) >= 0) {
+					up++;
+				} 
 			}
-			fout.close();
+			if (up % 2 != 0) {
+				fout << a.x << " " << a.y << " " << color << "\n";
+			}
 		}
+		fout.close();
+	}
 
+};
+
+class Hierarchical{
+public:
+	void makeClasters(SetPoints &set) {
+		int num;
+		cout << "Enter how many clasters do you want to find\n"; cin >> num;
+
+
+		UnitePoints(set, num);
+
+
+		//make result file
+		string file = "data_hier.txt";
+		set.print_answer(file);
+	}
+
+private:
+	vector <pair <int, pair <int, int> > > ribs;
+
+	void UnitePoints(SetPoints &set, int num) {
+		for (int i = 0; i < set.mas.size(); ++i) {
+			for (int j = i + 1; j < set.mas.size(); ++j) {
+				ribs.push_back({distAB(set.mas[i], set.mas[j]), {i, j}});
+			}
+		}
+		sort(ribs.begin(), ribs.end());
+		//draw every claster to each color
+		map <int, vector <int> > clasters;
+		for (int i = 0; i < set.mas.size(); ++i) {
+			set.mas[i].type = i + 1;
+			clasters[i + 1].push_back(i);
+		}
+		int ptr = 0;
+		/*cout << "debug came\n";
+		cout << "ribs.size(): " << ribs.size() << endl;
+		cout << "clasters.size(): " << clasters.size() << endl;*/
+		while (clasters.size() > num) {
+			if (ptr >= ribs.size()) {
+				cout << "debug\n ptr >= ribs.size()\n";
+				cout << "clasters.size(): " << clasters.size() << endl;
+				exit(0);
+			}
+			pair <int, int> p = ribs[ptr].sec;
+			++ptr;
+			int type1 = set.mas[p.fir].type;
+			int type2 = set.mas[p.sec].type;
+			if (type1 == type2) continue;
+			int size1 = clasters[type1].size();
+			int size2 = clasters[type2].size();
+			if (size1 > size2) {
+				deleteClaster(set, clasters, type2, type1);
+			} else {
+				deleteClaster(set, clasters, type1, type2);
+			}
+		}
+	}
+
+	void deleteClaster(SetPoints &set, map <int, vector <int> > &clasters, int typeDel, int typeUnite) {
+		for (auto i : clasters[typeDel]) {
+			set.mas[i].type = typeUnite;
+			clasters[typeUnite].push_back(i);
+		}
+		clasters.erase(typeDel);
+	}
 };
 
 
@@ -565,9 +625,9 @@ public:
 		ofstream fout;
 		fout.open("data_dbscan.txt");
 		fout.close();
-
+		cout << "\nSETTING TO VISUALISATION:\n";
 		cout << "To see the result you must set this settings to console:\n";
-		cout << "gnuplot\nset xrange [-200:200]\nset yrange [-200:200]\n";
+		cout << "gnuplot\nset xrange [-200:200]\nset yrange [-200:200]\n\n\n";
 		//cout << "set title "set palette defined ( 20 \"#101010\", 30 \"#ff0000\", 40 \"#00ff00\", 50 \"#e0e0e0\" )""
 
 		while(1) {
@@ -577,47 +637,58 @@ public:
 			cout << "Press 3 to find clasters with dbscan\n";
 			cout << "Press 4 to find claster with k-means\n";
 			cout << "Press 5 to find claster with hierarchy\n";
-			cout << "Press 9 to exit\n";
+			cout << "Press 6 to load data from file\n";
+			cout << "Press 7 to write all current clouds to file\n";
+			cout << "Press 8 to exit\n";
 
 
-			char t;
-			cin >> t;
-			if (t == '1') {
+			int user = getInt(1, 8);
+			if (user == 1) {
 
 				s.makeRandomPoints();
 
 			}
-			else if (t == '2') {
+			else if (user == 2) {
 
 				s.genSetPoints();
 
 			}
-			else if (t == '3') {
+			else if (user == 3) {
 
 				Dbscan db;
 				db.makeClasters(s);
 
 			}
-			else if (t == '4') {
+			else if (user == 4) {
 
 				Kmeans km;
 				km.makeClasters(s);
 				
 			}
-			else if (t == '5') {
-				string file = copy_points_from("data_dbscan.txt");
-				SetPoints s;
-				s.scan(file);
-				s.hierarchy();
+			else if (user == 5) {
+
+				Hierarchical hr;
+				hr.makeClasters(s);
+
 			}
-			else if (t == '9') {
+			else if (user == 6) {
+
+				s.scanFromFile();
+
+			} 
+			else if (user == 7) {
+
+				s.printToFile();
+
+			}
+			else if (user == 8) {
 				break;
 			}
 		}
 	}
-	
+
 private:
-	string copy_points_from(string file) {
+	/*string copy_points_from(string file) {
 		ifstream fin;
 		fin.open(file);
 		string output = "data.txt";
@@ -634,7 +705,7 @@ private:
 		fin.close();
 		fout.close();
 		return output;
-	}
+	}*/
 };
 
 double randDouble(double min, double max) {
