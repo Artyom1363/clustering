@@ -128,13 +128,8 @@ class Point{
 public:
 	//наследовать class center от point с полем sum_distance
 	double lenX = 0.0, lenY = 0.0;
-	int qX = 0, qY = 0;
-
-	int type = 0;
-	bool used = false;
+	int qX = 0, qY = 0, type = 0;
 	double x, y, dist_to_center = MAX_DOUBLE;
-	pair<int, double> neighbours[5] = {{0, INF}, {0, INF}, 
-						{0, INF}, {0, INF}, {0, INF}};
 
 
 	Point() {}
@@ -159,19 +154,25 @@ public:
 		
 	}
 
-	double latest(int num) {
-		return neighbours[num - 1].sec;
+};
+
+class PointDbscan: public Point{
+public: 
+	int quantity;
+	bool used = false;
+	vector <pair<double, int>> neighbours;
+
+
+	PointDbscan(int x, int y, int q) : Point(x, y), quantity(q) {}
+
+
+	double latest() {
+		return neighbours[quantity - 1].fir;
 	}
 
-
-	void insert_neighbour(pair<int, double> neighbour) {
-		if (neighbours[4].sec < neighbour.sec) return;
-		neighbours[4] = neighbour;
-		for (int i = 4; i > 0; i--) {
-			if (neighbours[i].sec < neighbours[i - 1].sec) {
-				swap(neighbours[i], neighbours[i - 1]);
-			}
-		}
+	void processNeighbours() {
+		sort(neighbours.begin(), neighbours.end());
+		neighbours.resize(quantity);
 	}
 
 };
@@ -189,14 +190,15 @@ public:
 
 	vector <Point> getPoints() {
 		int size, height, weight;
-		cout << "Enter how many points will be in cloud\n"; cin >> size;
-		cout << "Enter height of cloud\n"; cin >> height;
-		cout << "Enter weight of cloud\n"; cin >> weight;
-		cout << "Enter x coordinate of center of cloud\n"; cin >> X_center;
-		cout << "Enter y coordinate of center of cloud\n"; cin >> Y_center;
+		cout << "Enter how many points will be in cloud\n"; size = getInt(1, 10000);
+		cout << "Enter height of cloud\n"; height = getInt(1, 1000);
+		cout << "Enter weight of cloud\n"; weight = getInt(1, 1000);
+		cout << "Enter x coordinate of center of cloud\n"; X_center = getInt(-10000, 10000);
+		cout << "Enter y coordinate of center of cloud\n"; Y_center = getInt(-10000, 10000);
 		genPoints(size, height, weight);
 		move();
 		turn();
+		turn2(X_center, Y_center);
 		return vect_of_points;
 	}
 
@@ -221,9 +223,9 @@ private:
 	void move() {
 		int x_bias, y_bias;
 		cout << "Enter bias x (more 0 means to right, less than 0 means to left)\n";
-		cin >> x_bias;
+		x_bias = getInt(-10000, 10000);
 		cout << "Enter bias y (more 0 means to upper, less than 0 means to down)\n";
-		cin >> y_bias;
+		y_bias = getInt(-10000, 10000);
 		for (auto &i : vect_of_points) {
 			i.x += x_bias;
 			i.y += y_bias;
@@ -234,7 +236,7 @@ private:
 	void turn() {
 		double radians, degrees;
 		cout << "Enter degree in degrees to move\n";
-		cin >> degrees;
+		degrees = getInt(-360, 360);
 		radians = (degrees / 180.0) * M_PI; 
 		for (auto &i : vect_of_points) {
 			double x = i.x * cos(radians) - i.y * sin(radians);
@@ -244,14 +246,26 @@ private:
 		}
 	}
 
+
+	void turn2(double x_center, double y_center) {
+		double radians, degrees;
+		cout << "Enter degree in degrees to move about himself\n";
+		degrees = getInt(-360, 360);
+		radians = (degrees / 180.0) * M_PI; 
+		for (auto &i : vect_of_points) {
+			double x = (i.x - x_center) * cos(radians) - (i.y - y_center) * sin(radians);
+			double y = (i.x - x_center) * sin(radians) + (i.y - y_center) * cos(radians);
+			i.x = x + x_center;
+			i.y = y + y_center;
+		}
+	}
+
 };
 
 //field
 class SetPoints{
 public:
 	vector <Point> mas;
-	//vector <vector <Point>> matr_dist;
-	vector <pair<double, pair<int, int>>> ribs;
 
 	int size;
 
@@ -338,64 +352,6 @@ private:
 };
 
 
-class Shell{
-public:
-	vector <Point> points;
-
-	void get(string file) {
-		ifstream fin;
-		fin.open(file);
-		double x, y;
-		while (fin >> x) {
-			fin >> y;
-			Point p(x, y);
-			points.pb(p);
-		}
-		fin.close();
-	}
-
-	void show() {
-		for (auto i : points) {
-			i.show();
-		}
-	}
-
-	void fill(double min_x, double max_x, double min_y, double max_y, int color) {
-		ofstream fout;
-		fout.open("data_dbscan.txt", ios::app);
-		
-		for (int i = 0; i < DENSITY; i++) {
-			double x, y;
-			x = randDouble(min_x, max_x);
-			y = randDouble(min_y, max_y);;
-			Point l, r, a(x, y);
-			int up = 0;
-			for (int i = 0; i < points.size(); i++) {
-				l = points[i];
-				r = points[(i + 1) % points.size()];
-				if (l.x > r.x) {
-					r = points[i];
-					l = points[(i + 1) % points.size()];
-				}
-				if (l.x >= a.x || a.x >= r.x) {
-					if (l.x == a.x && r.x != a.x && l.y > a.y) {
-						up++;
-					}
-					continue;
-				}
-				if (vect_comp(r, l, a) >= 0) {
-					up++;
-				} 
-			}
-			if (up % 2 != 0) {
-				fout << a.x << " " << a.y << " " << color << "\n";
-			}
-		}
-		fout.close();
-	}
-
-};
-
 class Hierarchical{
 public:
 	void makeClasters(SetPoints &set) {
@@ -421,16 +377,12 @@ private:
 			}
 		}
 		sort(ribs.begin(), ribs.end());
-		//draw every claster to each color
 		map <int, vector <int> > clasters;
 		for (int i = 0; i < set.mas.size(); ++i) {
 			set.mas[i].type = i + 1;
 			clasters[i + 1].push_back(i);
 		}
 		int ptr = 0;
-		/*cout << "debug came\n";
-		cout << "ribs.size(): " << ribs.size() << endl;
-		cout << "clasters.size(): " << clasters.size() << endl;*/
 		while (clasters.size() > num) {
 			if (ptr >= ribs.size()) {
 				cout << "debug\n ptr >= ribs.size()\n";
@@ -465,11 +417,11 @@ private:
 class Kmeans{
 public:
 	void makeClasters(SetPoints &set) {
-		int num;
-		cout << "Enter how many clasters do you want to find\n"; cin >> num;
+		cout << "Enter how many clasters do you want to find\n"; 
+		cin >> num;
 
 
-		make_centers(set, num);
+		make_centers(set);
 
 
 		//make result file
@@ -479,16 +431,18 @@ public:
 	}
 
 private:
-	void make_centers(SetPoints &set, int num) {
-		vector <Point> centers(num);
+	int num;
+	vector <Point> centers;
+	void make_centers(SetPoints &set) {
+		centers.resize(num);
 		for (int i = 0; i < num; i++) {
-			Point a(0, 500, 0, 500);
+			Point a(-500, 500, -500, 500);
 			centers[i] = a;
 		}
-		for (auto i : centers) {
+		/*for (auto i : centers) {
 			cout << "random center: ";
 			i.show();
-		}
+		}*/
 		for (int k = 1; k <= 100; k++) {
 			for (int i = 0; i < set.mas.size(); i++) {
 				set.mas[i].dist_to_center = 1e9;
@@ -515,57 +469,81 @@ private:
 
 class Dbscan{  
 public:
+	
 	void makeClasters(SetPoints &set) {
+		double radius;
+		cout << "Enter point search radius\n"; cin >> radius;
+		cout << "Enter quantity of points in radius to consider main point\n";
+		quantity = getInt(1, 100);
 
-		fill_neighbours(set);
+		//make new class based on point
+		copyToNewFormat(set);
 
-		//find optimal dist
-		double dist = find_optimal_dist(set);
+		//find nearest neighbours
+		fill_neighbours();
 
 		//connects poitns to clasters
-		connect_points(set, dist);
+		connect_points(radius);
+
+		//transfer the resulting labels
+		copyLabels(set);
 
 		//make result file
 		string file = "data_dbscan.txt";
 		set.print_answer(file);
+
 	}
 
 private:
-	void fill_neighbours(SetPoints &set) {
-		for (int i = 0; i < set.mas.size(); i++) {
-			for (int j = 0; j < set.mas.size(); j++) {
-				if (i == j) continue;
-				double d = distAB(set.mas[i], set.mas[j]);
-				set.mas[i].insert_neighbour({j, d});
-			}
+
+	int quantity;
+	vector <PointDbscan> points;
+
+
+	void copyToNewFormat(SetPoints &set) {
+		for (auto i : set.mas) {
+			PointDbscan p(i.x, i.y, quantity);
+			points.push_back(p);
 		}
 	}
 
-	void connect_points(SetPoints &set, double dist) {
+
+	void fill_neighbours() {
+		for (int i = 0; i < points.size(); ++i) {
+			for (int j = 0; j < points.size(); ++j) {
+				if (i == j) continue;
+				double d = distAB(points[i], points[j]);
+				points[i].neighbours.push_back({d, j});
+			}
+			points[i].processNeighbours();
+		}
+	}
+
+
+	void connect_points(double radius) {
 		int CLASTER_NUM = 1;
 
 		//определяем и соеденяем основные точки
-		for (int i = 0; i < set.mas.size(); i++) {
-			if (set.mas[i].used) continue;
-			set.mas[i].used = true;
-			if (set.mas[i].latest(4) <= dist) { // основная точка
-				dfs(set, i, CLASTER_NUM, dist);
-				CLASTER_NUM++;
+		for (int i = 0; i < points.size(); i++) {
+			if (points[i].used) continue;
+			points[i].used = true;
+			if (points[i].latest() <= radius) { // основная точка
+				dfs(i, CLASTER_NUM, radius);
+				++CLASTER_NUM;
 			}
 		}
+		cout << "Quantity of clasters:\n" << CLASTER_NUM << endl;
 
 		//добавляем пограничные точки
-		for (int i = 0; i < set.mas.size(); i++) {
-			if (!set.mas[i].type) {
-				for (int j = 0; j < 4; j++) {
-					pair <int, double> neighbour = set.mas[i].neighbours[j];
-					if (neighbour.sec > dist) {
+		for (int i = 0; i < points.size(); i++) {
+			if (!points[i].type) {
+				for (int j = 0; j < quantity; j++) {
+					pair <double, int> neighbour = points[i].neighbours[j];
+					if (neighbour.fir > radius) {
 						break;
 					}
-					if (set.mas[neighbour.fir].latest(4) <= dist) {
-						cout << "insert borderline point: ";
-						set.mas[i].show();
-						set.mas[i].type = set.mas[neighbour.fir].type;
+					if (points[neighbour.sec].latest() <= radius) {
+						points[i].type = points[neighbour.sec].type;
 						break;
 					}
 				}
@@ -573,53 +551,34 @@ private:
 		}
 	}
 
-	void dfs(SetPoints &set, int num, int col, double dist) {
-		set.mas[num].used = true;
-		if (set.mas[num].latest(4) > dist) {
+	void dfs(int num, int col, double radius) {
+		points[num].used = true;
+		if (points[num].latest() > radius) {
 			return;
 		}
-		set.mas[num].type = col;
-		for (int i = 0; i < set.mas.size(); i++) {
-			if (set.mas[i].used) continue;
-			if (distAB(set.mas[num], set.mas[i]) <= dist) {
-				dfs(set, i, col, dist);
+		points[num].type = col;
+		for (int i = 0; i < points.size(); i++) {
+			if (points[i].used) continue;
+			if (distAB(points[num], points[i]) <= radius) {
+				dfs(i, col, radius);
 			}
 		}
 	}
 
-	double find_optimal_dist(SetPoints &set) {
-		vector <double> distanses(set.mas.size());
-
-		for (int i = 0; i < distanses.size(); i++) {
-			distanses[i] = set.mas[i].latest(4);
+	void copyLabels(SetPoints &set) {
+		for (int i = 0; i < set.mas.size(); ++i) {
+			set.mas[i].type = points[i].type;
 		}
-
-		sort(distanses.begin(), distanses.end());
-		int dX = distanses.size() / 50;
-		int step = max(1, (int)(distanses.size() / 100));
-		double dist = 0.0;
-		for (int i = 0; i < distanses.size(); i += step) {
-			if (i + dX >= distanses.size()) {
-				dist = distanses[i];
-				return dist;
-			}
-			double dY = distanses[i + dX] - distanses[i];
-			double der = dY/dX;
-			if (der >= DERIVATIVE) {
-				dist = distanses[i];
-				return dist;
-			}
-		}
-		return dist;
 	}
+
 };
 
-
+ 
 class Menu{
 public:
 	SetPoints s;
 	void start() {
-		vector <Shell> Shells;
+		//vector <Shell> Shells;
 
 		//clean file
 		ofstream fout;
@@ -687,33 +646,10 @@ public:
 		}
 	}
 
-private:
-	/*string copy_points_from(string file) {
-		ifstream fin;
-		fin.open(file);
-		string output = "data.txt";
-		ofstream fout;
-		fout.open(output);
-		fout.setf(ios::fixed);
-		fout.precision(7);
-		int color;
-		double x, y;
-		while (fin >> x) {
-			fin >> y >> color;
-			fout << x << " " << y << "\n";
-		}
-		fin.close();
-		fout.close();
-		return output;
-	}*/
 };
 
 double randDouble(double min, double max) {
 	return min + (max - min) * (double)(abs(rand()) % RAND_MAX) / RAND_MAX;
-}
-
-bool comp(Point a, Point b) {
-	return a.latest(4) < b.latest(4);
 }
 
 double distAB(Point a, Point b) {  
